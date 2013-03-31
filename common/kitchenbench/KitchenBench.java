@@ -60,7 +60,7 @@ public class KitchenBench implements IGuiHandler {
     proxy.registerRenderers();
     //proxy.registerServerTickHandler();
 
-    nextItemId = MelonArmor.create(nextItemId).getLastId();
+    nextItemId = MelonArmor.create(nextItemId, proxy).getLastId();
     nextItemId++;
 
     ovenBlock = BlockOven.create(nextBlockId, proxy);

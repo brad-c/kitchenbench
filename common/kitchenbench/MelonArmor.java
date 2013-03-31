@@ -20,8 +20,8 @@ import net.minecraftforge.common.IArmorTextureProvider;
 
 public class MelonArmor {
 
-  public static MelonArmor create(int id) {
-    MelonArmor ma = new MelonArmor(id);
+  public static MelonArmor create(int id, CommonProxy proxy) {
+    MelonArmor ma = new MelonArmor(id, proxy);
     ma.init();
     return ma;
   }
@@ -34,9 +34,12 @@ public class MelonArmor {
   private MelonArmorItem helmet;
   private MelonArmorItem leggings;
   private MelonArmorItem boots;
+  
+  private int rendererPrefix;
 
-  private MelonArmor(int id) {
+  private MelonArmor(int id, CommonProxy proxy) {
     material = EnumHelper.addArmorMaterial("Mellon", 24, new int[] { 3, 8, 6, 3 }, 25);
+    rendererPrefix = proxy.addArmor("MellonArmor");
     lastId = id;
   }
 
@@ -94,10 +97,10 @@ public class MelonArmor {
   private String getTexture(ItemStack itemstack) {
     int id = itemstack.itemID;
     if (id == chestplate.itemID || id == boots.itemID || id == helmet.itemID) {
-      return "/kitchenbench/armor/MelonArmor_1.png";
+      return "/mods/kitchenbench/textures/armor/MelonArmor_1.png";
     }
     if (id == leggings.itemID) {
-      return "/kitchenbench/armor/MelonArmor_2.png";
+      return "/mods/kitchenbench/textures/armor/MelonArmor_2.png";
     }
     return null;
   }
@@ -109,7 +112,7 @@ public class MelonArmor {
     private int enchantmentStrength;
 
     public MelonArmorItem(int id, int type, String name, int enchantment, int enchantmentStrength) {
-      super(id, material, -1, type); //not using the renderer prefix, using the 'getArmorTextureFile' instead for more flexability
+      super(id, material, rendererPrefix, type); 
       this.name = name;
       this.enchantment = enchantment;
       this.enchantmentStrength = enchantmentStrength;

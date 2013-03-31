@@ -22,23 +22,32 @@ import net.minecraft.tileentity.TileEntity;
 
 public class TileEntityOven extends TileEntity implements IInventory {
 
-  private static final short COOK_TIME_TICKS = 100; //5 seconds 
-  
-  private static final short BURN_TIME_TICKS = 600; //30 seconds of heat per piece of fuel
-  
+  private static final short COOK_TIME_TICKS = 100; // 5 seconds
+
+  private static final short BURN_TIME_TICKS = 600; // 30 seconds of heat per
+                                                    // piece of fuel
+
   public short facing = 3;
 
   private short progress = 0;
-  
-  private short temperature = 0;      
-  
-  private IOvenRecipe recipeCooking = null;
 
+  private short temperature = 0;
+
+  // 0 = input slot, 1 = fuel slot, 2 = output slot
   public ItemStack[] inventory;
 
+  // 'Invisible' stack holding the item currently being cooked
+  private ItemStack cookingStack = null;
+
+  // Could just look this up as needed from the input stack at the start, then
+  // the cooking stack when done, but we store it to save the second lookup
+  private IOvenRecipe cookingRecipe = null;
+
   private int ticksSinceSync = -1;
-  
+
   private boolean firstUpdate = true;
+
+  private boolean lastActive;
 
   public TileEntityOven() {
     inventory = new ItemStack[3];
@@ -65,11 +74,11 @@ public class TileEntityOven extends TileEntity implements IInventory {
   public boolean isActive() {
     return temperature > 0;
   }
-  
+
   public short getTemperature() {
     return temperature;
   }
-  
+
   public void setTemperature(short temperature) {
     this.temperature = temperature;
   }
@@ -81,18 +90,17 @@ public class TileEntityOven extends TileEntity implements IInventory {
   public void setProgress(short progress) {
     this.progress = progress;
   }
-  
+
   public int getFuelRemainingScaled(int scale) {
     return temperature * scale / BURN_TIME_TICKS;
   }
-  
+
   public int getCookProgressScaled(int scale) {
     return progress * scale / COOK_TIME_TICKS;
-  }  
+  }
 
   @Override
   public boolean isStackValidForSlot(int i, ItemStack itemStack) {
-    System.out.println("___________________ isStackValidForSlot " + i);
     if (i == 0 && OvenRecipes.isCookable(itemStack)) {
       return true;
     } else if (i == 1 && isFuel(itemStack)) {
@@ -107,12 +115,12 @@ public class TileEntityOven extends TileEntity implements IInventory {
 
   public static boolean isFuel(int itemId) {
     return itemId == Item.redstone.itemID;
-  } 
-  
+  }
+
   public boolean hasFuel() {
     return inventory[1] != null && inventory[1].stackSize > 0;
   }
-  
+
   public boolean hasInput() {
     return inventory[0] != null && inventory[0].stackSize > 0;
   }
@@ -121,117 +129,139 @@ public class TileEntityOven extends TileEntity implements IInventory {
   public void updateEntity() {
     super.updateEntity();
 
-    if (worldObj == null || worldObj.isRemote) { // do all updates only on the server                                                 
+    if (worldObj == null) { // sanity check
       return;
     }
 
-    boolean requiresSync = false;
+    if (worldObj.isRemote) {
 
-    // First update, send state to client
+      // check if the block on the client needs to update its texture
+      if (isActive() != lastActive) {
+        worldObj.markBlockForRenderUpdate(xCoord, yCoord, zCoord);
+      }
+      lastActive = isActive();
+      return;
+
+    } // else is server, do all logic only on the server
+
+    boolean requiresClientSync = false;
     if (firstUpdate) {
+      // First update, send state to client
       firstUpdate = false;
-      requiresSync = true;
+      requiresClientSync = true;
     }
-    
-    if(temperature >= 0) {
-      --temperature;  
-      requiresSync = true;
-    }
-    
-    //Process any current items
-    requiresSync |= checkProgress();    
-    //Then see if we need to start a new one    
-    requiresSync |= cookNextInput();
 
-    if (requiresSync) {
-      //this will cause 'getPacketDescription()' to be called and its result will be sent to the PacketHandler on the other end of
-      //client/server connection
+    if (temperature >= 0) {
+      --temperature;
+      requiresClientSync = true;
+    }
+
+    // Process any current items
+    requiresClientSync |= checkProgress();
+    // Then see if we need to start a new one
+    requiresClientSync |= cookNextInput();
+
+    if (requiresClientSync) {
+      // this will cause 'getPacketDescription()' to be called and its result
+      // will be sent to the PacketHandler on the other end of
+      // client/server connection
       worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+      // And this will make sure our current tile entity state is saved
+      worldObj.updateTileEntityChunkAndDoNothing(xCoord, yCoord, zCoord, this);
+
     }
 
-  }    
+  }
 
   protected boolean checkProgress() {
-    if(recipeCooking  == null) {
+    if (cookingStack == null) {
       return false;
     }
     boolean requiresSync = false;
-    //Make sure we have some heat
-    if(temperature < 0 && hasFuel()) {
+    // Make sure we have some heat
+    if (temperature < 0 && hasFuel()) {
       decrStackSize(1, 1);
       temperature = BURN_TIME_TICKS;
       requiresSync = true;
-    }    
-    //if we do, do some cooking
-    if(temperature >= 0) {
+    }
+    // if we do, do some cooking
+    if (temperature >= 0) {
       ++progress;
       requiresSync = true;
     }
-    //then check if we are done
-    if(progress >= COOK_TIME_TICKS) {
-      itemCooked();       
+    // then check if we are done
+    if (progress >= COOK_TIME_TICKS) {
+      itemCooked();
       requiresSync = true;
-    }    
-    return requiresSync;    
+    }
+    return requiresSync;
   }
 
   private void itemCooked() {
-    ItemStack result = recipeCooking.getCookedItem();
-    if(inventory[2] == null) {            
-      inventory[2] = result.copy();
-    } else {
-      inventory[2].stackSize += result.stackSize;
+    if (cookingRecipe == null) {
+      // this can happen if the server is shutdown mid way through a cook-up as
+      // we only save the stack being cooked, not the recipe
+      cookingRecipe = OvenRecipes.getRecipe(cookingStack);
     }
-    recipeCooking = null;    
+    if (cookingRecipe != null) {
+      ItemStack result = cookingRecipe.getCookedItem();
+      if (inventory[2] == null) {
+        inventory[2] = result.copy();
+      } else {
+        inventory[2].stackSize += result.stackSize;
+      }
+    }
+    cookingRecipe = null;
+    cookingStack = null;
     progress = 0;
   }
 
   private boolean cookNextInput() {
-    IOvenRecipe nextRecipe = canCookNextInput(); 
-    if(nextRecipe == null) {  
+    IOvenRecipe nextRecipe = canCookNextInput();
+    if (nextRecipe == null) {
       return false;
     }
-    //Sort out our heat
-    if(temperature < 0) {
+    // Sort out our heat
+    if (temperature < 0) {
       decrStackSize(1, 1);
       temperature = BURN_TIME_TICKS;
     }
-    //then get our recipe and take away the source items
-    recipeCooking = nextRecipe;
-    decrStackSize(0, 1);
+    // then get our recipe and take away the source items
+    cookingRecipe = nextRecipe;
+    cookingStack = decrStackSize(0, 1);
     return true;
   }
-  
+
   protected IOvenRecipe canCookNextInput() {
-    if(recipeCooking != null) {
-      return null; //already cooking something
+    if (cookingStack != null) {
+      return null; // already cooking something
     }
-    boolean hasHeatSource = hasFuel() || temperature > 0;    
-    if(!hasHeatSource) {
-      return null; //no heat to cook
+    boolean hasHeatSource = hasFuel() || temperature > 0;
+    if (!hasHeatSource) {
+      return null; // no heat to cook
     }
-    if(!hasInput()) {
-      return null; //nothing to cook
+    if (!hasInput()) {
+      return null; // nothing to cook
     }
-    
+
     IOvenRecipe nextRecipe = OvenRecipes.getRecipe(inventory[0]);
-    if(nextRecipe == null) {
-      return null; //no recipe
-    }  
-    
-   //make sure we can merge the recipe output with our result
-    if(inventory[2] == null) {
+    if (nextRecipe == null) {
+      return null; // no recipe
+    }
+
+    // make sure we can merge the recipe output with our result
+    if (inventory[2] == null) {
       return nextRecipe;
     }
     ItemStack cookedItem = nextRecipe.getCookedItem();
-    if(inventory[2].stackSize + cookedItem.stackSize > inventory[2].getMaxStackSize()) {
-      return null; //no room for output
-    }    
-    if(cookedItem.isItemEqual(inventory[2]) && ItemStack.areItemStackTagsEqual(inventory[2], cookedItem)) {     
+    if (inventory[2].stackSize + cookedItem.stackSize > inventory[2].getMaxStackSize()) {
+      return null; // no room for output
+    }
+    if (cookedItem.isItemEqual(inventory[2]) && ItemStack.areItemStackTagsEqual(inventory[2], cookedItem)) {
       return nextRecipe;
-    } //else can't merge the current output and this items output 
-    
-    return null;    
+    } // else can't merge the current output and this items output
+
+    return null;
   }
 
   @Override
@@ -267,8 +297,11 @@ public class TileEntityOven extends TileEntity implements IInventory {
       byte slot = itemStack.getByte("Slot");
       if (slot >= 0 && slot < inventory.length) {
         inventory[slot] = ItemStack.loadItemStackFromNBT(itemStack);
+      } else if (slot == inventory.length) {
+        cookingStack = ItemStack.loadItemStackFromNBT(itemStack);
       }
     }
+
   }
 
   @Override
@@ -283,13 +316,21 @@ public class TileEntityOven extends TileEntity implements IInventory {
     NBTTagList itemList = new NBTTagList();
     for (int i = 0; i < inventory.length; i++) {
       if (inventory[i] != null) {
-        NBTTagCompound itemStack = new NBTTagCompound();
-        itemStack.setByte("Slot", (byte) i);
-        inventory[i].writeToNBT(itemStack);
-        itemList.appendTag(itemStack);
+        NBTTagCompound itemStackNBT = new NBTTagCompound();
+        itemStackNBT.setByte("Slot", (byte) i);
+        inventory[i].writeToNBT(itemStackNBT);
+        itemList.appendTag(itemStackNBT);
       }
     }
+    if (cookingStack != null) {
+      NBTTagCompound cookingStackNBT = new NBTTagCompound();
+      cookingStackNBT.setByte("Slot", (byte) inventory.length);
+      cookingStack.writeToNBT(cookingStackNBT);
+      itemList.appendTag(cookingStackNBT);
+
+    }
     nbtRoot.setTag("Items", itemList);
+
   }
 
   // ----- Basic inventory stuff
@@ -297,7 +338,7 @@ public class TileEntityOven extends TileEntity implements IInventory {
   ItemStack[] getInventory() {
     return inventory;
   }
-  
+
   @Override
   public int getSizeInventory() {
     return inventory.length;
@@ -346,5 +387,5 @@ public class TileEntityOven extends TileEntity implements IInventory {
   @Override
   public void closeChest() {
   }
-  
+
 }

@@ -57,7 +57,7 @@ public class BlockOven extends BlockContainer {
 
   private void init() {
     LanguageRegistry.addName(this, "Kitchen Oven");
-    GameRegistry.registerBlock(this, OvenItem.class, "kitchenOven");
+    GameRegistry.registerBlock(this, "kitchenOven");
     GameRegistry.registerTileEntity(TileEntityOven.class, "kitchenOvenEntity");
     GameRegistry.addRecipe(new ItemStack(this), "xxx", "xyx", "xxx", 'x', new ItemStack(Block.cobblestone), 'y', new ItemStack(Block.glass));
   }

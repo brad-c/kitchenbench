@@ -37,7 +37,7 @@ public class GuiOven extends GuiContainer {
    */
   protected void drawGuiContainerBackgroundLayer(float par1, int par2, int par3) {
     GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-    this.mc.renderEngine.bindTexture("/gui/furnace.png");
+    this.mc.renderEngine.bindTexture("/mods/kitchenbench/textures/gui/oven.png");
     int k = (width - xSize) / 2;
     int l = (height - ySize) / 2;
     
