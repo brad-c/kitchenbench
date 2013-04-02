@@ -1,4 +1,4 @@
-package kitchenbench;
+package kitchenbench.oven;
 
 import java.util.HashMap;
 import java.util.Map;

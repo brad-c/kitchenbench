@@ -1,7 +1,10 @@
 package kitchenbench;
 
+import kitchenbench.oven.GuiOven;
+import kitchenbench.oven.TileEntityOven;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.client.registry.RenderingRegistry;
+import cpw.mods.fml.common.network.IGuiHandler;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
@@ -30,14 +33,24 @@ public class ClientProxy extends CommonProxy {
     return RenderingRegistry.addNewArmourRendererPrefix(armor);
   }
 
-  public Object getGuiElementForClient(int iD, EntityPlayer player, World world, int x, int y, int z) {
-    TileEntity te = world.getBlockTileEntity(x, y, z);
-    return new GuiOven(player.inventory, (TileEntityOven) te);
-  }
-
   @Override
   public World getClientWorld() {
     return FMLClientHandler.instance().getClient().theWorld;
   }
+  
+//  @Override
+//  public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+//    return null;
+//  }
+//  
+//  @Override
+//  public Object getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {    
+//    player.sendChatToPlayer("From server GUI id is: " + id);
+//    IGuiHandler handler = guiHandlers.get(id);
+//    if(handler != null) {
+//      return handler.getServerGuiElement(id, player, world, x, y, z);
+//    }
+//    return null;
+//  }
 
 }

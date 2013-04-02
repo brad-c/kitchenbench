@@ -1,4 +1,4 @@
-package kitchenbench;
+package kitchenbench.oven;
 
 import net.minecraft.item.ItemStack;
 

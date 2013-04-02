@@ -1,4 +1,4 @@
-package kitchenbench;
+package kitchenbench.oven;
 
 import java.util.HashSet;
 import java.util.Set;

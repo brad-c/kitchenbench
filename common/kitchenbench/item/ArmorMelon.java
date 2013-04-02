@@ -1,7 +1,9 @@
-package kitchenbench;
+package kitchenbench.item;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import kitchenbench.CommonProxy;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.LanguageRegistry;
@@ -18,10 +20,10 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.EnumHelper;
 import net.minecraftforge.common.IArmorTextureProvider;
 
-public class MelonArmor {
+public class ArmorMelon {
 
-  public static MelonArmor create(int id, CommonProxy proxy) {
-    MelonArmor ma = new MelonArmor(id, proxy);
+  public static ArmorMelon create(int id, CommonProxy proxy) {
+    ArmorMelon ma = new ArmorMelon(id, proxy);
     ma.init();
     return ma;
   }
@@ -37,33 +39,38 @@ public class MelonArmor {
   
   private int rendererPrefix;
 
-  private MelonArmor(int id, CommonProxy proxy) {
-    material = EnumHelper.addArmorMaterial("Mellon", 24, new int[] { 3, 8, 6, 3 }, 25);
+  private ArmorMelon(int id, CommonProxy proxy) {
+    
     rendererPrefix = proxy.addArmor("MellonArmor");
+    
+    material = EnumHelper.addArmorMaterial("Mellon", 24, new int[] { 3, 8, 6, 3 }, 25);       
+    
     lastId = id;
+    chestplate = new MelonArmorItem(lastId, 1, "melonChestplate", EnchantmentDamage.protection.effectId, 2);
+    
+    lastId++;    
+    helmet = new MelonArmorItem(lastId, 0, "melonHelmet",EnchantmentDamage.respiration.effectId, 1);
+    
+    lastId++;    
+    leggings = new MelonArmorItem(lastId, 2, "melonLeggings",EnchantmentDamage.protection.effectId, 2);
+    
+    lastId++;
+    boots = new MelonArmorItem(lastId, 3, "melonBoots",EnchantmentDamage.featherFalling.effectId, 4);
+    
   }
 
-  private void init() {
-    chestplate = new MelonArmorItem(lastId, 1, "melonChestplate", EnchantmentDamage.protection.effectId, 2);
+  private void init() {    
     LanguageRegistry.addName(chestplate, "Melon Chestplate");
     GameRegistry.addRecipe(new ItemStack(chestplate), "x x", "xxx", "xxx", 'x', new ItemStack(Block.melon));
-    lastId++;
-
-    helmet = new MelonArmorItem(lastId, 0, "melonHelmet",EnchantmentDamage.respiration.effectId, 1);
+    
     LanguageRegistry.addName(helmet, "Melon Helmet");
     GameRegistry.addRecipe(new ItemStack(helmet), "xxx", "x x", "   ", 'x', new ItemStack(Block.melon));
-    lastId++;
-
-    leggings = new MelonArmorItem(lastId, 2, "melonLeggings",EnchantmentDamage.protection.effectId, 2);
+    
     LanguageRegistry.addName(leggings, "Melon Leggings");
     GameRegistry.addRecipe(new ItemStack(leggings), "xxx", "x x", "x x", 'x', new ItemStack(Block.melon));
-    lastId++;
-
-    boots = new MelonArmorItem(lastId, 3, "melonBoots",EnchantmentDamage.featherFalling.effectId, 4);
+    
     LanguageRegistry.addName(boots, "Melon Boots");
     GameRegistry.addRecipe(new ItemStack(boots), "   ", "x x", "x x", 'x', new ItemStack(Block.melon));
-    lastId++;
-
   }
 
   public int getLastId() {

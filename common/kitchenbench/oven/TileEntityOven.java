@@ -1,10 +1,12 @@
-package kitchenbench;
+package kitchenbench.oven;
 
 import java.lang.ProcessBuilder.Redirect;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import kitchenbench.PacketHandler;
 
 import cpw.mods.fml.common.network.NetworkModHandler;
 
@@ -24,8 +26,8 @@ public class TileEntityOven extends TileEntity implements IInventory {
 
   private static final short COOK_TIME_TICKS = 100; // 5 seconds
 
-  private static final short BURN_TIME_TICKS = 600; // 30 seconds of heat per
-                                                    // piece of fuel
+  //30 seconds of heat per piece of fuel
+  private static final short BURN_TIME_TICKS = 600;                                                    
 
   public short facing = 3;
 
@@ -335,7 +337,7 @@ public class TileEntityOven extends TileEntity implements IInventory {
 
   // ----- Basic inventory stuff
 
-  ItemStack[] getInventory() {
+  public ItemStack[] getInventory() {
     return inventory;
   }
 

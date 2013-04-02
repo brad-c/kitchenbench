@@ -1,8 +1,15 @@
-package kitchenbench;
+package kitchenbench.oven;
 
 import java.util.Iterator;
 import java.util.Random;
 
+import kitchenbench.ClientProxy;
+import kitchenbench.CommonProxy;
+import kitchenbench.GuiHandler;
+import kitchenbench.KitchenBench;
+
+import cpw.mods.fml.common.network.IGuiHandler;
+import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.LanguageRegistry;
 import cpw.mods.fml.relauncher.Side;
@@ -25,7 +32,7 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
-public class BlockOven extends BlockContainer {
+public class BlockOven extends BlockContainer implements IGuiHandler {
 
   public static boolean canSmelt(ItemStack item) {
     return item.itemID != Item.redstone.itemID;
@@ -46,12 +53,15 @@ public class BlockOven extends BlockContainer {
 
   private final Random random;
 
+  private final CommonProxy proxy;
+
   private BlockOven(int blockId, CommonProxy proxy) {
     super(blockId, Material.iron);
+    this.proxy = proxy;
     setHardness(2.0F);
     setStepSound(soundMetalFootstep);
     setUnlocalizedName("kitchenOven");
-    setCreativeTab(CreativeTabs.tabDecorations);
+    setCreativeTab(CreativeTabs.tabMisc);
     random = new Random();
   }
 
@@ -59,7 +69,8 @@ public class BlockOven extends BlockContainer {
     LanguageRegistry.addName(this, "Kitchen Oven");
     GameRegistry.registerBlock(this, "kitchenOven");
     GameRegistry.registerTileEntity(TileEntityOven.class, "kitchenOvenEntity");
-    GameRegistry.addRecipe(new ItemStack(this), "xxx", "xyx", "xxx", 'x', new ItemStack(Block.cobblestone), 'y', new ItemStack(Block.glass));
+    GameRegistry.addRecipe(new ItemStack(this), "xxx", "zyz", "yyy", 'x', new ItemStack(Item.ingotIron), 'y', new ItemStack(Item.redstone), 'z', new ItemStack(Block.planks));
+    KitchenBench.guiHandler.registerGuiHandler(GuiHandler.GUI_ID_OVEN, this);
   }
 
   @Override
@@ -80,6 +91,24 @@ public class BlockOven extends BlockContainer {
     entityPlayer.openGui(KitchenBench.instance, 0, world, x, y, z);
     return true;
   }
+  
+  @Override
+  public Object getServerGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
+    //The server needs the container as it manages the adding and removing of items, which are then sent to the client for display 
+    TileEntity te = (TileEntity)world.getBlockTileEntity(x, y, z);
+    if(te instanceof TileEntityOven) {
+      return new OvenContainer(player.inventory, (TileEntityOven)te);
+    }       
+    return null;
+  }
+  
+
+  @Override
+  public Object getClientGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
+    TileEntity te = world.getBlockTileEntity(x, y, z);
+    return new GuiOven(player.inventory, (TileEntityOven) te);
+  }
+  
 
   @Override
   public void registerIcons(IconRegister iconRegister) {
@@ -202,5 +231,9 @@ public class BlockOven extends BlockContainer {
   private boolean isActive(IBlockAccess blockAccess, int x, int y, int z) {
     return ((TileEntityOven) blockAccess.getBlockTileEntity(x, y, z)).isActive();
   }
+  
+
+  
+  
 
 }

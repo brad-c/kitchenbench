@@ -2,6 +2,12 @@ package kitchenbench;
 
 import javax.xml.ws.ServiceMode;
 
+import kitchenbench.oven.BlockOven;
+import kitchenbench.oven.DefaultOvenRecipe;
+import kitchenbench.oven.OvenContainer;
+import kitchenbench.oven.OvenRecipes;
+import kitchenbench.oven.TileEntityOven;
+
 import net.minecraft.block.Block;
 import net.minecraft.enchantment.EnchantmentDamage;
 import net.minecraft.entity.player.EntityPlayer;
@@ -30,7 +36,7 @@ import cpw.mods.fml.common.registry.LanguageRegistry;
 
 @Mod(name = "Kitchen Bench", modid = "KitchenBench", version = "0.0.0.0", dependencies = "required-after:Forge@[7.0,);required-after:FML@[5.0.5,)")
 @NetworkMod(clientSideRequired = true, serverSideRequired = false, channels = { "KitchenBench" }, packetHandler = PacketHandler.class)
-public class KitchenBench implements IGuiHandler {
+public class KitchenBench {
 
   @Instance("KitchenBench")
   public static KitchenBench instance;
@@ -43,11 +49,16 @@ public class KitchenBench implements IGuiHandler {
 
   private static final int STARTING_BLOCK_ID = 600;
 
-  private int nextItemId = STARTING_ITEM_ID;
+  //private int nextItemId = STARTING_ITEM_ID;
 
   private int nextBlockId = STARTING_BLOCK_ID;
+
+  public static Items items;
   
-  public static BlockOven ovenBlock;
+  public static Blocks blocks;
+  
+  public static GuiHandler guiHandler = new GuiHandler();
+  
 
   @PreInit
   public void preInit(FMLPreInitializationEvent event) {
@@ -57,58 +68,51 @@ public class KitchenBench implements IGuiHandler {
   @Init
   public void load(FMLInitializationEvent event) {
 
+    instance = this;
+    
     proxy.registerRenderers();
+    
+    NetworkRegistry.instance().registerGuiHandler(this, guiHandler);
+    
     //proxy.registerServerTickHandler();
 
-    nextItemId = MelonArmor.create(nextItemId, proxy).getLastId();
-    nextItemId++;
+    items = new Items();
+    items.init(STARTING_ITEM_ID, proxy);
+    
+    blocks = new Blocks();
+    blocks.init(STARTING_BLOCK_ID, proxy);        
 
-    ovenBlock = BlockOven.create(nextBlockId, proxy);
-    nextBlockId++;
-    
-    addOvenRecipes();
-    
-    NetworkRegistry.instance().registerGuiHandler(this, this);
+    addOvenRecipes();        
     
     MinecraftForge.EVENT_BUS.register(this);
+    
+    
 
   }
 
   private void addOvenRecipes() {
-    OvenRecipes.addRecipe(new DefaultOvenRecipe(Item.appleRed, Item.appleGold).addEnchantment(EnchantmentDamage.sharpness.effectId, 3).setName("Ollies Apple"));
+    OvenRecipes.addRecipe(new DefaultOvenRecipe(Item.appleRed, items.roastAppleItem).addEnchantment(EnchantmentDamage.sharpness.effectId, 3).setName("Ollies Apple"));
     
-    ItemStack inputStack;
-    ItemStack resultStack;    
+    OvenRecipes.addRecipe(new DefaultOvenRecipe(Item.potato, items.roastPotatoItem));
     
-    inputStack = new ItemStack(Item.carrot);
-    resultStack = new ItemStack(Item.goldenCarrot, 2);
-    OvenRecipes.addRecipe(new DefaultOvenRecipe(inputStack,resultStack));
+    OvenRecipes.addRecipe(new DefaultOvenRecipe(Item.appleRed, items.roastAppleItem));
     
-    inputStack = new ItemStack(Block.cobblestone);
-    resultStack = new ItemStack(Block.stoneBrick);
-    OvenRecipes.addRecipe(new DefaultOvenRecipe(inputStack,resultStack));
+//    ItemStack inputStack;
+//    ItemStack resultStack;    
+    
+//    inputStack = new ItemStack(Item.carrot);
+//    resultStack = new ItemStack(Item.goldenCarrot, 2);
+//    OvenRecipes.addRecipe(new DefaultOvenRecipe(inputStack,resultStack));
+    
+//    inputStack = new ItemStack(Block.cobblestone);
+//    resultStack = new ItemStack(Block.stoneBrick);
+//    OvenRecipes.addRecipe(new DefaultOvenRecipe(inputStack,resultStack));
   }
 
   @PostInit
   public void postInit(FMLPostInitializationEvent event) {
     // Stub Method
   }
-
-  //TODO: Move to oven classes
-  @Override
-  public Object getServerGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
-    //The server needs the container as it manages the adding and removing of items, which are then sent to the client for display 
-    TileEntity te = (TileEntity)world.getBlockTileEntity(x, y, z);
-    if(te instanceof TileEntityOven) {
-      return new OvenContainer(player.inventory, (TileEntityOven)te);
-    }       
-    return null;
-  }
-  
-  //TODO: Move to oven classes
-  @Override
-  public Object getClientGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
-    return proxy.getGuiElementForClient(ID, player, world, x, y, z);
-  }
+ 
 
 }

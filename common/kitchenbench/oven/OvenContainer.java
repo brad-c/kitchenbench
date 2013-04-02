@@ -1,4 +1,4 @@
-package kitchenbench;
+package kitchenbench.oven;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
